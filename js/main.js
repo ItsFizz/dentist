@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeMenu = () => {
     if (toggle && navLinks) {
       toggle.classList.remove('active');
+      toggle.setAttribute('aria-expanded', 'false');
       navLinks.classList.remove('open');
       document.body.classList.remove('menu-open');
     }
@@ -34,13 +35,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const openMenu = () => {
     if (toggle && navLinks) {
       toggle.classList.add('active');
+      toggle.setAttribute('aria-expanded', 'true');
       navLinks.classList.add('open');
       document.body.classList.add('menu-open');
     }
   };
 
   if (toggle && navLinks) {
+    toggle.setAttribute('aria-expanded', 'false');
+
     toggle.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       const isOpen = navLinks.classList.contains('open');
       if (isOpen) {
@@ -57,8 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close when clicking outside of menu
     document.addEventListener('click', (e) => {
-      if (navLinks.classList.contains('open') && !navLinks.contains(e.target) && !toggle.contains(e.target)) {
-        closeMenu();
+      if (navLinks.classList.contains('open')) {
+        if (!navLinks.contains(e.target) && !toggle.contains(e.target)) {
+          closeMenu();
+        }
       }
     });
 
@@ -69,9 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Close on resize > 820px
+    // Close on resize > 860px
     window.addEventListener('resize', () => {
-      if (window.innerWidth > 820 && navLinks.classList.contains('open')) {
+      if (window.innerWidth > 860 && navLinks.classList.contains('open')) {
         closeMenu();
       }
     }, { passive: true });
