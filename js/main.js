@@ -1,88 +1,150 @@
 /* ============================================
-   DR AIMAN DENTIST — MAIN JAVASCRIPT
-   Lightweight: scroll reveal, navbar, mobile menu
+   DR AIMAN DENTIST — JAVASCRIPT
+   Optimized for smooth performance on all devices
    ============================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // ---- Elements ----
-  const navbar   = document.getElementById('navbar');
-  const toggle   = document.getElementById('navToggle');
+  const navbar = document.getElementById('navbar');
+  const toggle = document.getElementById('navToggle');
   const navLinks = document.getElementById('navLinks');
-  const links    = navLinks.querySelectorAll('a');
+  const links = navLinks ? navLinks.querySelectorAll('a') : [];
 
   // ================================================
-  // 1. NAVBAR — Solid on scroll
+  // 1. NAVBAR SCROLL SHADOW
   // ================================================
-  let lastScroll = 0;
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY;
-    navbar.classList.toggle('scrolled', y > 40);
-    lastScroll = y;
-  }, { passive: true });
+  const handleScroll = () => {
+    if (navbar) {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    }
+  };
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  handleScroll();
 
   // ================================================
-  // 2. MOBILE MENU TOGGLE
+  // 2. MOBILE MENU HANDLING
   // ================================================
-  toggle.addEventListener('click', () => {
-    toggle.classList.toggle('active');
-    navLinks.classList.toggle('open');
-  });
-
-  // Close menu on link click
-  links.forEach(link => {
-    link.addEventListener('click', () => {
+  const closeMenu = () => {
+    if (toggle && navLinks) {
       toggle.classList.remove('active');
       navLinks.classList.remove('open');
+      document.body.classList.remove('menu-open');
+    }
+  };
+
+  const openMenu = () => {
+    if (toggle && navLinks) {
+      toggle.classList.add('active');
+      navLinks.classList.add('open');
+      document.body.classList.add('menu-open');
+    }
+  };
+
+  if (toggle && navLinks) {
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = navLinks.classList.contains('open');
+      if (isOpen) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
     });
-  });
+
+    // Close when clicking any nav link
+    links.forEach(link => {
+      link.addEventListener('click', closeMenu);
+    });
+
+    // Close when clicking outside of menu
+    document.addEventListener('click', (e) => {
+      if (navLinks.classList.contains('open') && !navLinks.contains(e.target) && !toggle.contains(e.target)) {
+        closeMenu();
+      }
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && navLinks.classList.contains('open')) {
+        closeMenu();
+      }
+    });
+
+    // Close on resize > 820px
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 820 && navLinks.classList.contains('open')) {
+        closeMenu();
+      }
+    }, { passive: true });
+  }
 
   // ================================================
-  // 3. ACTIVE NAV LINK ON SCROLL
+  // 3. ACTIVE NAV LINK HIGHLIGHTING
   // ================================================
   const sections = document.querySelectorAll('section[id], header[id]');
-  const observerNav = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const id = entry.target.id;
-        links.forEach(l => {
-          l.classList.toggle('active', l.getAttribute('href') === `#${id}`);
-        });
-      }
-    });
-  }, { rootMargin: '-30% 0px -70% 0px' });
+  if ('IntersectionObserver' in window && sections.length > 0) {
+    const observerNav = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          links.forEach(l => {
+            const href = l.getAttribute('href');
+            l.classList.toggle('active', href === `#${id}`);
+          });
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
 
-  sections.forEach(sec => observerNav.observe(sec));
+    sections.forEach(sec => observerNav.observe(sec));
+  }
 
   // ================================================
-  // 4. SCROLL REVEAL — Fade-in on intersection
-  //    Lightweight: uses IntersectionObserver, no jank
+  // 4. SCROLL REVEAL (Safe & Instant for Visible Items)
   // ================================================
   const revealTargets = document.querySelectorAll(
-    '.service-card, .review-card, .about-grid, .contact-grid, .info-card, .hero-stats, .map-container'
+    '.service-card, .review-card, .contact-card, .info-card, .map-container'
   );
 
-  revealTargets.forEach(el => el.classList.add('reveal'));
+  if ('IntersectionObserver' in window && revealTargets.length > 0) {
+    const observerReveal = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observerReveal.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
 
-  const observerReveal = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        observerReveal.unobserve(entry.target);  // Once visible, stop observing
+    revealTargets.forEach(el => {
+      // Check if item is already inside the initial viewport
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight) {
+        el.classList.add('visible');
+      } else {
+        el.classList.add('reveal');
+        observerReveal.observe(el);
       }
     });
-  }, { threshold: 0.12 });
-
-  revealTargets.forEach(el => observerReveal.observe(el));
+  } else {
+    // Fallback if IntersectionObserver isn't supported
+    revealTargets.forEach(el => el.classList.add('visible'));
+  }
 
   // ================================================
-  // 5. SMOOTH SCROLL — For browsers that need help
+  // 5. SMOOTH SCROLL WITH HEADER OFFSET
   // ================================================
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', e => {
-      const target = document.querySelector(anchor.getAttribute('href'));
+    anchor.addEventListener('click', function(e) {
+      const targetId = this.getAttribute('href');
+      if (targetId === '#' || targetId === '') return;
+      const target = document.querySelector(targetId);
       if (target) {
         e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth' });
+        const navHeight = navbar ? navbar.offsetHeight : 70;
+        const targetPosition = target.getBoundingClientRect().top + window.scrollY - navHeight;
+        window.scrollTo({
+          top: targetPosition,
+          behavior: 'smooth'
+        });
       }
     });
   });
